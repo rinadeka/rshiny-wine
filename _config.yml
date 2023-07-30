@@ -1,0 +1,5 @@
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+- jekyll-remote-theme # add this line to the plugins list if you already have one
+title: Rina Deka's Wine Quality Shiny App
+description: An R Shiny App exploring and modelling wine quality data from UCI's Machine Learning repository.
