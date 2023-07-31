@@ -46,7 +46,84 @@ ui <- dashboardPage(
       tabItem(
         tabName = "exploreTab",
         fluidRow(
-          # Your Data Exploration page content goes here
+          box(
+            title = "One Variable Analysis",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 6,
+            selectInput("selectedOneVar", "Select One Variable:", choices = names(WineQuality)),
+            # Checkbox to select the output options
+            checkboxInput("oneVarSummary", "Display Summary"),
+            checkboxInput("oneVarHistogram", "Display Histogram"),
+            actionButton("oneVarAnalysis", "Analyze"), # Analyze button to trigger the outputs
+            conditionalPanel(
+              condition = "input.oneVarAnalysis",
+              # Conditionally display the summary output
+              conditionalPanel(
+                condition = "input.oneVarSummary",
+                verbatimTextOutput("oneVarSummaryOutput")
+              ),
+              # Conditionally display the histogram output
+              conditionalPanel(
+                condition = "input.oneVarHistogram",
+                plotOutput("oneVarHistogramOutput")
+              )
+            )
+          ),
+          box(
+            title = "Two Variable Analysis",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 6,
+            # Select two variables for analysis
+            selectInput("selectedTwoVar1", "Select Variable 1:", choices = names(WineQuality)),
+            selectInput("selectedTwoVar2", "Select Variable 2:", choices = names(WineQuality)),
+            checkboxInput("twoVarScatterplot", "Scatterplot"),
+            checkboxInput("correlationOutput", "Correlation Coefficient"),
+            actionButton("analyzeTwoVar", "Analyze"), # Analyze button to trigger the outputs
+            conditionalPanel(
+              condition="input.analyzeTwoVar",
+              #Conditionally display scatterplot 
+              conditionalPanel(
+                condition="input.twoVarScatterplot",
+                plotOutput("twoVarScatterplotOutput")
+              ),
+              conditionalPanel(
+                condition="input.correlationOutput",
+                verbatimTextOutput("correlationOutput")
+              ),
+            )
+          ),
+          # New box for Multivariable Analysis
+          box(
+            title = "Multivariable Analysis",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 6,
+            # Select multiple variables (multiple = TRUE)
+            selectInput("selectedMultiVar", "Select Variables:", choices = names(WineQuality), multiple = TRUE),
+            # Checkbox to select the output options
+            checkboxInput("multiVarPCA", "Display PCA Plot"),
+            checkboxInput("multiVarCorrelation", "Display Correlation Heatmap"),
+            # Analyze button to trigger the outputs
+            actionButton("analyzeMultiVar", "Analyze"),
+            
+            # Conditionally display the outputs
+            conditionalPanel(
+              condition = "input.analyzeMultiVar",
+              # Conditionally display the PCA plot
+              conditionalPanel(
+                condition = "input.multiVarPCA",
+                plotOutput("multiVarPCAOutput")
+              ),
+              # Conditionally display the correlation heatmap
+              conditionalPanel(
+                condition = "input.multiVarCorrelation",
+                plotOutput("multiVarCorrelationOutput")
+              )
+            )
+          ),
+          #add more boxes here
         )
       ),
       # Modeling Page
@@ -127,6 +204,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "dataTab",
         fluidRow(
+          #Data page content goes here
           # Your Data page content goes here
           column(width = 12,
                  h2("Data"),
@@ -135,11 +213,15 @@ ui <- dashboardPage(
                  # Allow the user to subset rows and columns
                  uiOutput("subsetControls"),
                  # Download the whole or subsetted dataset as a CSV file
-                 downloadButton("downloadData", "Download CSV")
+                 downloadButton("downloadData", "Download CSV"),
+                 # Add a new DTOutput for the subsetted data table
+                 DTOutput("subsettedDataTable")
           )
         )
       )
     )
   )
 )
+
+
 

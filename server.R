@@ -1,5 +1,3 @@
-#Server file 
-
 library(shiny)
 library(shinydashboard)
 library(DT)
@@ -9,8 +7,8 @@ library(readr)
 library(ggplot2)
 library(rpart)
 library(randomForest)
-
-
+library(pROC)
+library(ggcorrplot)
 
 # Read the winequality data from a CSV file (replace 'path/to/winequality.csv' with the actual file path)
 WineQuality <- read.csv("C:/Users/rsdek/Documents/repos/ShinyApps/rshiny-wine/WineQuality.csv")
@@ -23,9 +21,74 @@ server <- function(input, output, session) {
   # Your server logic for the About page goes here
   
   # Data Exploration Page
+  # One Variable Analysis
+  output$oneVarSummaryOutput <- renderPrint({
+    req(input$oneVarAnalysis, input$selectedOneVar)
+    if (input$oneVarAnalysis) {
+      if (input$oneVarSummary) {
+        # Calculate the five-number summary of the selected variable
+        summary_stats <- summary(WineQuality[, input$selectedOneVar])
+        summary_stats
+      } else {
+        NULL
+      }
+    }
+  })
   
-  # Your server logic for the Data Exploration page goes here
+  output$oneVarHistogramOutput <- renderPlot({
+    req(input$oneVarAnalysis, input$selectedOneVar)
+    if (input$oneVarAnalysis) {
+      if (input$oneVarHistogram) {
+        # Create a histogram of the selected variable
+        ggplot(WineQuality, aes_string(x = input$selectedOneVar)) + geom_histogram(binwidth = 1) + labs(title = "Histogram")
+      } else {
+        NULL
+      }
+    }
+  })
   
+  # Two Variable Analysis
+  observeEvent(input$analyzeTwoVar, {
+    # Create an overlayed histogram of the selected variables
+    if (input$twoVarScatterplot) {
+      output$twoVarScatterplotOutput <- renderPlot({
+        req(input$selectedTwoVar1, input$selectedTwoVar2)
+        ggplot(WineQuality, aes_string(x = input$selectedTwoVar1, y = input$selectedTwoVar2)) +
+          geom_point(alpha = 0.7) +
+          labs(title = "Two-Variable Scatterplot")
+      })
+    } else {
+      output$twoVarScatterplotOutput <- NULL
+    }
+    
+    output$correlationOutput <- renderText({
+      req(input$selectedTwoVar1, input$selectedTwoVar2)
+      correlation <- cor(WineQuality[, input$selectedTwoVar1], WineQuality[, input$selectedTwoVar2])
+      paste("Correlation Coefficient:", correlation)
+    })
+  })
+  
+  # Multivariable Analysis
+  output$multiVarPCAOutput <- renderPlot({
+    req(input$analyzeMultiVar, input$selectedMultiVar)
+    if (input$analyzeMultiVar && input$multiVarPCA) {
+      # Create PCA plot for selected variables
+      pca_data <- WineQuality[, input$selectedMultiVar]
+      pca_result <- prcomp(pca_data, scale. = TRUE)
+      biplot(pca_result, choices = c(1, 2), scale = 0)
+    }
+  })
+  
+  output$multiVarCorrelationOutput <- renderPlot({
+    req(input$analyzeMultiVar, input$selectedMultiVar)
+    if (input$analyzeMultiVar && input$multiVarCorrelation) {
+      # Create correlation heatmap for selected variables
+      correlation_matrix <- cor(WineQuality[, input$selectedMultiVar])
+      ggcorrplot::ggcorrplot(correlation_matrix, lab = TRUE, title = "Correlation Heatmap")
+    }
+  })
+  
+
   # Modeling Page
   observeEvent(input$trainProp, {
     # Update the test proportion based on the selected train proportion
@@ -57,6 +120,16 @@ server <- function(input, output, session) {
     predictors <- input$variables
     response_var <- "Red"
     
+    # Check if predictors are selected
+    if (length(predictors) == 0) {
+      return(NULL)  # Return NULL if no predictors are selected
+    }
+    
+    # Check if selected variables exist in the dataset
+    if (any(!predictors %in% names(WineQuality))) {
+      return(NULL)  # Return NULL if selected variables do not exist in the dataset
+    }
+    
     # Fit the models
     models <- list()
     if (input$modelType == "Generalized Linear Model") {
@@ -72,11 +145,39 @@ server <- function(input, output, session) {
     
     models
   })
-  
-  
   # Display model fit statistics and summaries
   observeEvent(fit_models(), {
-    # Update your UI elements here to display model fit statistics and summaries
+    models <- fit_models()
+    
+    output$fitStats <- renderPrint({
+      # Fit statistics for Generalized Linear Model
+      if (!is.null(models$glm_model)) {
+        # Predict on test data
+        glm_pred <- predict(models$glm_model, newdata = test_data, type = "response")
+        # Convert probabilities to binary outcome (0 or 1)
+        glm_pred_class <- ifelse(glm_pred > 0.5, 1, 0)
+        # Calculate RMSE
+        glm_rmse <- sqrt(mean((test_data$Red - glm_pred)^2))
+        cat("Generalized Linear Model RMSE:", glm_rmse, "\n")
+      }
+      
+      # Fit statistics for Classification Tree
+      if (!is.null(models$tree_model)) {
+        # Predict on test data
+        tree_pred <- predict(models$tree_model, newdata = test_data, type = "class")
+        # Create confusion matrix
+        tree_cm <- table(Actual = test_data$Red, Predicted = tree_pred)
+        cat("Classification Tree Confusion Matrix:\n")
+        print(tree_cm)
+      }
+    })
+    
+    output$varImpPlot <- renderPlot({
+      # Plot variable importance for Random Forest
+      if (!is.null(models$rf_model)) {
+        varImpPlot(models$rf_model, main = "Random Forest Variable Importance")
+      }
+    })
   })
   
   # Compare models on the test set
@@ -84,12 +185,17 @@ server <- function(input, output, session) {
     # Evaluate the models on the test set and display appropriate fit statistics
   })
   
+  #Data Page
   
-  # Data Page
+  # Reactive values for the full data and subsetted data
+  full_data <- reactiveVal(WineQuality)
+  subsetted_data <- reactiveVal(NULL)
+  
+  # Render the data table
   output$dataTable <- renderDT({
-    datatable(WineQuality)
+    datatable(full_data())
   })
-  
+
   # Allow the user to subset rows and columns
   output$subsetControls <- renderUI({
     fluidRow(
@@ -110,17 +216,16 @@ server <- function(input, output, session) {
     )
   })
   
-  # Reactive data for the subsetted data table
-  subsetted_data <- reactive({
-    req(input$applySubset)
-    # Subset the data based on the user's inputs
-    subset_data <- WineQuality[1:input$nRows, input$columns, drop = FALSE]
-    subset_data
+  # Update the subsetted data based on the user's inputs
+  observeEvent(input$applySubset, {
+    req(input$nRows, input$columns)
+    subset_data <- full_data()[1:min(input$nRows, nrow(full_data())), input$columns, drop = FALSE]
+    subsetted_data(subset_data)
   })
   
-  # Update the data table with the subsetted data
-  observe({
-    replaceData(proxy = dataTableProxy("dataTable"), data = subsetted_data())
+  # Render the subsetted data table
+  output$subsettedDataTable <- renderDT({
+    datatable(subsetted_data())
   })
   
   # Download the whole or subsetted dataset as a CSV file
