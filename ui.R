@@ -1,3 +1,4 @@
+source("global.R")
 library(shiny)
 library(shinydashboard)
 library(DT)

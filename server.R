@@ -1,3 +1,4 @@
+source("global.R")
 library(shiny)
 library(shinydashboard)
 library(DT)
@@ -13,15 +14,11 @@ library(corrplot)
 library(e1071)
 library(Metrics)
 
-# Read the winequality data from a CSV file
-WineQuality <- read.csv("data/WineQuality.csv")
-
+WineQuality <- read_csv("data/WineQuality.csv")
 # Server logic for the Shiny App
 server <- function(input, output, session) {
-  
-  # About Page
-  
-  # Your server logic for the About page goes here
+  # Read the winequality data from a CSV file
+  WineQuality <- read_csv("data/WineQuality.csv")
   
   # Data Exploration Page
   # One Variable Analysis
