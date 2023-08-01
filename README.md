@@ -22,4 +22,4 @@ The following line of code may be ran in your R Console or terminal; please run 
 `install.packages(c("shiny","shinydashboard","DT","caret","tidyverse","readr","ggplot2","rpart","randomForest","pROC","ggcorrplot","corrplot","e1071","Metrics"))`
 ## shiny::runGitHub()
 The following code can be pasted into RStudio console in order to run this app:
-`shiny::runGitHub("rinadeka/rshiny-wine")`
+`shiny::runGitHub(repo="rshiny-wine",username="rinadeka",ref="main")")`
