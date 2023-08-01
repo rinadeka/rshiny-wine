@@ -190,6 +190,7 @@ server <- function(input, output, session) {
     unname(prediction())
   })
   
+  #DataPage
   output$column_checkboxes <- renderUI({
     checkboxGroupInput("columns", "Columns to display:", choices = names(WineQuality), selected = names(WineQuality))
   })
@@ -198,9 +199,6 @@ server <- function(input, output, session) {
     DT::datatable(WineQuality, options = list(pageLength = 10))
   })
   
-  
-  
-  #Data Page
   output$download_data <- downloadHandler(
     filename = function() {
       "data.csv"
