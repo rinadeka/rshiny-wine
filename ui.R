@@ -206,29 +206,23 @@ ui <- dashboardPage(
           tabBox(
             title = "Model Fitting",
             tabPanel(
-              "Fitting",
-              fluidRow(
-                # Select model type
-                column(width = 4,
-                       h4("Select Model Type"),
-                       selectInput("modelType", "Model Type:",
-                                   choices = c("Generalized Linear Model", "Classification Tree", "Random Forest"))
-                ),
-                # Select variables
-                column(width = 4,
-                       h4("Select Variables"),
-                       selectInput("variables", "Select Variables to Use:", names(WineQuality),
-                                   multiple = TRUE)
-                ),
-                # Data split proportions
-                column(width = 4,
-                       h4("Data Split Proportions"),
-                       numericInput("trainProp", "Training Data Proportion:", 0.7, min = 0, max = 1, step = 0.05),
-                       numericInput("testProp", "Test Data Proportion:", 0.3, min = 0, max = 1, step = 0.05)
-                )
-              ),
-              fluidRow(
-                actionButton("fitModels", "Fit Models")
+              "Model Fitting",
+              # numericInput("train_prop", "Proportion of data for training:", value = 0.7, min = 0, max = 1),
+              sliderInput("train_prop", "Proportion of data for training:", min = 0.1, max = 0.9, value = 0.7),
+              # checkboxGroupInput("model_vars", "Variables to use in models:", choices = names(WineQuality)),
+              selectInput("model_vars", "Variables to use in models:", choices = names(WineQuality), multiple = TRUE),
+              selectInput("dependent_var", "Choose a dependent variable:", choices = c('Red')),
+              actionButton("fit_models", "Fit Models"),
+              verbatimTextOutput("model_output"),
+              h3("Linear Regression Summary"),
+              verbatimTextOutput("lin_reg_summary"),
+              h3("Tree Model Summary"),
+              verbatimTextOutput("tree_summary"),
+              h3("Random Forest Summary"),
+              verbatimTextOutput("rf_summary"),
+              h3("Test Statistics"),
+              verbatimTextOutput("test_stats")
+
               )
             )
           ),
@@ -238,25 +232,12 @@ ui <- dashboardPage(
             tabPanel(
               "Prediction",
               fluidRow(
-                column(width = 4,
-                       h4("Select Model Type for Prediction"),
-                       selectInput("predictionModel", "Model Type:",
-                                   choices = c("Generalized Linear Model", "Classification Tree", "Random Forest"))
-                ),
-                # Select predictors for prediction
-                column(width = 4,
-                       h4("Select Predictor Values"),
-                       # Add input elements for each predictor variable
-                       # For example, numericInput("predictor_var", "Predictor Variable:", 0)
-                ),
-                # Predict button
-                column(width = 4,
-                       actionButton("predictButton", "Predict")
-                )
-              ),
-              # Display prediction result
-              fluidRow(
-                # Add an element to display the prediction resut
+                h2("Prediction"),
+                selectInput("prediction_model", "Model to use for prediction:", 
+                            choices = c("Linear Regression" = "lin_reg", "Tree" = "tree", "Random Forest" = "rf")),
+                uiOutput("predictor_inputs"),
+                actionButton("predict", "Predict"),
+                verbatimTextOutput("prediction_output")
               )
             )
           )
@@ -266,24 +247,14 @@ ui <- dashboardPage(
       tabItem(
         tabName = "dataTab",
         fluidRow(
-          #Data page content goes here
-          # Your Data page content goes here
-          column(width = 12,
-                 h2("Data"),
-                 # Display the dataset in a data table
-                 DTOutput("dataTable"),
-                 # Allow the user to subset rows and columns
-                 uiOutput("subsetControls"),
-                 # Download the whole or subsetted dataset as a CSV file
-                 downloadButton("downloadData", "Download CSV"),
-                 # Add a new DTOutput for the subsetted data table
-                 DTOutput("subsettedDataTable")
+          #content here
+
           )
         )
       )
-    )
-  )
 )
+
+
 
 
 
