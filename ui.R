@@ -27,8 +27,8 @@ ui <- dashboardPage(
                  h3("Purpose of Each Tab:"),
                  p("1. About: Provides general information about the app, the data, and its source."),
                  p("2. Data Exploration: Allows users to create numerical and graphical summaries of the data."),
-                 p("3. Modeling: Allows users to fit three supervised learning models (multiple linear regression, regression/classification tree, and random forest) to the data and compare their performance."),
-                 p("4. Data: Allows users to view and manipulate the raw data."),
+                 p("3. Modeling: Allows users to fit three supervised learning models (generalized linear regression, classification tree, and random forest) to the wine quality data and compare their performance."),
+                 p("4. Data: Allows users to view and manipulate the raw data based on the number of rows they would like to see, and which variables they would like to observe."),
                  h3("The Wine Quality Data:"),
                  p("The Wine Quality dataset contains information about various red and white wines."),
                  p("The dataset is sourced from the UCI Machine Learning Repository."),
@@ -136,7 +136,69 @@ ui <- dashboardPage(
             tabPanel(
               "Info",
               fluidRow(
-                # Your explanation and mathJax content for modeling approaches goes here
+                # Generalized Linear Model (GLM) for Binary Response
+                column(width = 12,
+                       h3("Generalized Linear Model (GLM) for Binary Response"),
+                       withMathJax(
+                         "
+                   The Generalized Linear Model (GLM) is a versatile framework for modeling different types of response variables. In this case, we are interested in predicting whether a wine is red or not, which is a binary response (0 for not red, 1 for red).
+                   The GLM for binary response is typically based on the logistic function, which maps the linear predictor to the probability of the binary outcome.
+                   The logistic function (also known as the sigmoid function) is defined as:
+                   
+                   \\[ 
+                   \\text{logit}(p) = \\log\\left(\\frac{p}{1-p}\\right)
+                   \\]
+                   
+                   where \\( p \\) represents the probability of the binary outcome (wine being red) and \\( \\text{logit}(p) \\) is the log-odds of the positive outcome.
+                   
+                   The GLM estimates the coefficients of the predictors in the model using maximum likelihood estimation. The model equation for the binary response can be written as:
+                   
+                   \\[ 
+                   \\text{logit}(p) = \\beta_0 + \\beta_1 \\cdot x_1 + \\beta_2 \\cdot x_2 + \\ldots + \\beta_k \\cdot x_k
+                   \\]
+                   
+                   where \\( p \\) is the probability of the wine being red, and \\( \\beta_0, \\beta_1, \\ldots, \\beta_k \\) are the coefficients of the predictors \\( x_1, x_2, \\ldots, x_k \\) respectively. The goal of the model is to estimate these coefficients to best fit the data and make accurate predictions.
+                   "
+                       )
+                ),
+                # Classification Tree
+                column(width = 12,
+                       h3("Classification Tree"),
+                       withMathJax(
+                         "
+                   A Classification Tree is a non-linear predictive model that recursively splits the data into subsets based on predictor variables, with the aim of creating homogeneous groups within each subset with respect to the response variable (wine being red or not). Each split in the tree represents a decision based on the values of one of the predictor variables.
+                   
+                   The tree is grown using a process called recursive partitioning. At each step, the algorithm searches for the best predictor and the best split point that maximizes the separation of the response classes. The tree continues to grow until a stopping criterion is met, such as the maximum tree depth or the minimum number of samples in a leaf node.
+                   
+                   The decision rule at each internal node of the tree can be represented as:
+                   
+                   \\[ 
+                   \\text{if} \\quad x_j \\leq \\text{threshold} \\quad \\text{then} \\quad \\text{left branch} \\quad \\text{else} \\quad \\text{right branch}
+                   \\]
+                   
+                   where \\( x_j \\) is the value of predictor \\( j \\), and the threshold is the value that determines the split.
+                   "
+                       )
+                ),
+                # Random Forest
+                column(width = 12,
+                       h3("Random Forest"),
+                       withMathJax(
+                         "
+                   Random Forest is an ensemble learning method that builds multiple decision trees and combines their predictions to improve accuracy and reduce overfitting. Each tree in the forest is grown on a bootstrap sample of the data, and at each split, a random subset of predictor variables is considered.
+                   
+                   The predictions of individual trees are combined through majority voting for classification tasks (mode of the class predictions) to make the final prediction.
+                   
+                   The prediction of the Random Forest model can be written as:
+                   
+                   \\[ 
+                   \\text{Prediction} = \\text{Mode}(\\text{Prediction}_{\\text{tree}_1}, \\text{Prediction}_{\\text{tree}_2}, \\ldots, \\text{Prediction}_{\\text{tree}_N})
+                   \\]
+                   
+                   where \\( \\text{Prediction}_{\\text{tree}_i} \\) is the prediction of the \\( i \\)-th tree in the forest.
+                   "
+                       )
+                )
               )
             )
           ),

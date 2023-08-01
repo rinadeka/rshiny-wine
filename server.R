@@ -9,9 +9,12 @@ library(rpart)
 library(randomForest)
 library(pROC)
 library(ggcorrplot)
+library(corrplot)
+library(e1071)
+library(Metrics)
 
-# Read the winequality data from a CSV file (replace 'path/to/winequality.csv' with the actual file path)
-WineQuality <- read.csv("C:/Users/rsdek/Documents/repos/ShinyApps/rshiny-wine/WineQuality.csv")
+# Read the winequality data from a CSV file
+WineQuality <- read.csv("data/WineQuality.csv")
 
 # Server logic for the Shiny App
 server <- function(input, output, session) {
@@ -40,7 +43,7 @@ server <- function(input, output, session) {
     if (input$oneVarAnalysis) {
       if (input$oneVarHistogram) {
         # Create a histogram of the selected variable
-        ggplot(WineQuality, aes_string(x = input$selectedOneVar)) + geom_histogram(binwidth = 1) + labs(title = "Histogram")
+        ggplot(, aes_string(x = input$selectedOneVar)) + geom_histogram(binwidth = 1) + labs(title = "Histogram")
       } else {
         NULL
       }
@@ -90,159 +93,112 @@ server <- function(input, output, session) {
   
 
   # Modeling Page
-  observeEvent(input$trainProp, {
-    # Update the test proportion based on the selected train proportion
-    updateNumericInput(session, "testProp",
-                       value = 1 - input$trainProp,
-                       min = 0,
-                       max = (1 - input$trainProp),
-                       step = 0.01
-    )
-  })
   
-  observeEvent(input$testProp, {
-    # Update the train proportion based on the selected test proportion
-    updateNumericInput(session, "trainProp",
-                       value = 1 - input$testProp,
-                       min = 0,
-                       max = (1 - input$testProp),
-                       step = 0.01
-    )
-  })
-  # Fit models on the training data
-  fit_models <- eventReactive(input$fitModels, {
-    # Split data into training and test sets
-    train_index <- createDataPartition(WineQuality$Red, p = input$trainProp, list = FALSE)
-    train_data <- WineQuality[train_index, ]
-    test_data <- WineQuality[-train_index, ]
+  
+  model_fits <- eventReactive(input$fit_models, {
     
-    # Prepare predictors and response variables
-    predictors <- input$variables
-    response_var <- "Red"
-    
-    # Check if predictors are selected
-    if (length(predictors) == 0) {
-      return(NULL)  # Return NULL if no predictors are selected
+    if(length(input$model_vars) == 0) {
+      return(NULL)
     }
+    model_vars <- c(input$model_vars, input$dependent_var)
     
-    # Check if selected variables exist in the dataset
-    if (any(!predictors %in% names(WineQuality))) {
-      return(NULL)  # Return NULL if selected variables do not exist in the dataset
-    }
+    # Split the data
+    set.seed(123)  # for reproducibility
+    train_indices <- sample(1:nrow(WineQuality), size = round(input$train_prop * nrow(WineQuality)))
+    train_data <- WineQuality[train_indices, model_vars, drop = FALSE]
+    test_data <- WineQuality[-train_indices, model_vars, drop = FALSE]
     
     # Fit the models
-    models <- list()
-    if (input$modelType == "Generalized Linear Model") {
-      models$glm_model <- glm(as.formula(paste(response_var, "~", paste(predictors, collapse = "+"))),
-                              data = train_data, family = binomial)
-    } else if (input$modelType == "Classification Tree") {
-      models$tree_model <- rpart(as.formula(paste(response_var, "~", paste(predictors, collapse = "+"))),
-                                 data = train_data, method = "class")
-    } else if (input$modelType == "Random Forest") {
-      models$rf_model <- randomForest(as.formula(paste(response_var, "~", paste(predictors, collapse = "+"))),
-                                      data = train_data, ntree = 100)
+    # lin_reg <- lm(quality ~ ., data = train_data)
+    # tree <- rpart(quality ~ ., data = train_data)
+    # rf <- randomForest(quality ~ ., data = train_data)
+    # Fit the models
+    lin_reg <- lm(as.formula(paste(input$dependent_var, "~ .")), data = train_data)
+    tree <- rpart(as.formula(paste(input$dependent_var, "~ .")), data = train_data)
+    rf <- randomForest(as.formula(paste(input$dependent_var, "~ .")), data = train_data)
+    
+    
+    list(lin_reg = lin_reg, tree = tree, rf = rf, test_data = test_data)
+  }, ignoreNULL = FALSE)
+  
+  output$lin_reg_summary <- renderPrint({
+    if(is.null(model_fits()$lin_reg)) {
+      return(NULL)
     }
-    
-    models
+    summary(model_fits()$lin_reg)
   })
-  # Display model fit statistics and summaries
-  observeEvent(fit_models(), {
-    models <- fit_models()
-    
-    output$fitStats <- renderPrint({
-      # Fit statistics for Generalized Linear Model
-      if (!is.null(models$glm_model)) {
-        # Predict on test data
-        glm_pred <- predict(models$glm_model, newdata = test_data, type = "response")
-        # Convert probabilities to binary outcome (0 or 1)
-        glm_pred_class <- ifelse(glm_pred > 0.5, 1, 0)
-        # Calculate RMSE
-        glm_rmse <- sqrt(mean((test_data$Red - glm_pred)^2))
-        cat("Generalized Linear Model RMSE:", glm_rmse, "\n")
+  
+  output$tree_summary <- renderPrint({
+    if(is.null(model_fits()$tree)) {
+      return(NULL)
+    }
+    summary(model_fits()$tree)
+  })
+  
+  output$rf_summary <- renderPrint({
+    if(is.null(model_fits()$rf)) {
+      return(NULL)
+    }
+    summary(model_fits()$rf)
+  })
+  
+  # output$model_output <- renderPrint({
+  #   model_fits <- model_fits()
+  #   lapply(model_fits[1:3], summary)
+  # })
+  test_stats <- reactive({
+    model_fits <- model_fits()
+    test_data <- model_fits$test_data
+    if (is.null(test_data) || is.null(model_fits)) {
+      return(NULL)
+    }
+    rmse <- sapply(model_fits[1:3], function(model) {
+      if(is.null(model)) {
+        return(NULL)
       }
-      
-      # Fit statistics for Classification Tree
-      if (!is.null(models$tree_model)) {
-        # Predict on test data
-        tree_pred <- predict(models$tree_model, newdata = test_data, type = "class")
-        # Create confusion matrix
-        tree_cm <- table(Actual = test_data$Red, Predicted = tree_pred)
-        cat("Classification Tree Confusion Matrix:\n")
-        print(tree_cm)
-      }
+      preds <- predict(model, newdata = test_data)
+      # y_test <-test_data[input$dependent_var]
+      sqrt(mean((test_data$dependent_var - preds)^2))
     })
-    
-    output$varImpPlot <- renderPlot({
-      # Plot variable importance for Random Forest
-      if (!is.null(models$rf_model)) {
-        varImpPlot(models$rf_model, main = "Random Forest Variable Importance")
-      }
+    if(!is.null(rmse)) {
+      names(rmse) <- c("Linear Regression", "Tree", "Random Forest")
+    }
+    rmse
+  })
+  
+  output$test_stats <- renderPrint({
+    test_stats()
+  })
+  
+  
+  observeEvent(input$model_vars, {
+    updateTabsetPanel(session, "tabs", selected = "prediction")
+    output$predictor_inputs <- renderUI({
+      map(input$model_vars, ~ textInput(.x, label = .x, value = median(WineQuality[[.x]], na.rm = TRUE)))
     })
   })
   
-  # Compare models on the test set
-  observeEvent(fit_models(), {
-    # Evaluate the models on the test set and display appropriate fit statistics
+  prediction <- eventReactive(input$predict, {
+    req(input$model_vars, input$prediction_model, model_fits())
+    new_data <- do.call(cbind, lapply(input$model_vars, function(x) setNames(data.frame(as.numeric(input[[x]])), x)))
+    model <- model_fits()[[tolower(input$prediction_model)]]
+    
+    if (is.null(model)) {
+      return("Model not found. Please ensure that you have fit the model.")
+    }
+    
+    round(predict(model, newdata = new_data))
   })
+  
+  output$prediction_output <- renderPrint({
+    unname(prediction())
+  })
+  
+  output$column_checkboxes <- renderUI({
+    checkboxGroupInput("columns", "Columns to display:", choices = names(wine), selected = names(wine))
+  })
+  
+  
   
   #Data Page
-  
-  # Reactive values for the full data and subsetted data
-  full_data <- reactiveVal(WineQuality)
-  subsetted_data <- reactiveVal(NULL)
-  
-  # Render the data table
-  output$dataTable <- renderDT({
-    datatable(full_data())
-  })
-
-  # Allow the user to subset rows and columns
-  output$subsetControls <- renderUI({
-    fluidRow(
-      column(width = 4,
-             h4("Subset Rows"),
-             # Numeric input to select the number of rows to display
-             numericInput("nRows", "Number of Rows to Display:", 10, min = 1, max = nrow(WineQuality))
-      ),
-      column(width = 4,
-             h4("Subset Columns"),
-             # Select input to choose the columns to display
-             selectInput("columns", "Select Columns to Display:", names(WineQuality), multiple = TRUE)
-      ),
-      column(width = 4,
-             # Apply button to apply the row and column subset
-             actionButton("applySubset", "Apply Subset")
-      )
-    )
-  })
-  
-  # Update the subsetted data based on the user's inputs
-  observeEvent(input$applySubset, {
-    req(input$nRows, input$columns)
-    subset_data <- full_data()[1:min(input$nRows, nrow(full_data())), input$columns, drop = FALSE]
-    subsetted_data(subset_data)
-  })
-  
-  # Render the subsetted data table
-  output$subsettedDataTable <- renderDT({
-    datatable(subsetted_data())
-  })
-  
-  # Download the whole or subsetted dataset as a CSV file
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      if (!is.null(input$applySubset) && input$applySubset > 0) {
-        paste("subsetted_data.csv")
-      } else {
-        paste("WineQuality.csv")
-      }
-    },
-    content = function(file) {
-      if (!is.null(input$applySubset) && input$applySubset > 0) {
-        write.csv(subsetted_data(), file, row.names = FALSE)
-      } else {
-        write.csv(WineQuality, file, row.names = FALSE)
-      }
-    }
-  )
 }
