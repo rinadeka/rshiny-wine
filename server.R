@@ -108,10 +108,7 @@ server <- function(input, output, session) {
     train_data <- WineQuality[train_indices, model_vars, drop = FALSE]
     test_data <- WineQuality[-train_indices, model_vars, drop = FALSE]
     
-    # Fit the models
-    # lin_reg <- lm(quality ~ ., data = train_data)
-    # tree <- rpart(quality ~ ., data = train_data)
-    # rf <- randomForest(quality ~ ., data = train_data)
+
     # Fit the models
     lin_reg <- lm(as.formula(paste(input$dependent_var, "~ .")), data = train_data)
     tree <- rpart(as.formula(paste(input$dependent_var, "~ .")), data = train_data)
@@ -142,7 +139,10 @@ server <- function(input, output, session) {
     summary(model_fits()$rf)
   })
   
-
+  # output$model_output <- renderPrint({
+  #   model_fits <- model_fits()
+  #   lapply(model_fits[1:3], summary)
+  # })
   test_stats <- reactive({
     model_fits <- model_fits()
     test_data <- model_fits$test_data
@@ -154,7 +154,8 @@ server <- function(input, output, session) {
         return(NULL)
       }
       preds <- predict(model, newdata = test_data)
-      sqrt(mean((test_data$dependent_var - preds)^2))
+      # y_test <-test_data[input$dependent_var]
+      sqrt(mean((test_data$quality - preds)^2))
     })
     if(!is.null(rmse)) {
       names(rmse) <- c("Linear Regression", "Tree", "Random Forest")
@@ -165,7 +166,6 @@ server <- function(input, output, session) {
   output$test_stats <- renderPrint({
     test_stats()
   })
-  
   
   observeEvent(input$model_vars, {
     updateTabsetPanel(session, "tabs", selected = "prediction")
@@ -204,7 +204,7 @@ server <- function(input, output, session) {
       "data.csv"
     },
     content = function(file) {
-      write.csv(wine[1:input$rows, input$columns], file, row.names = FALSE)
+      write.csv(WineQuality[1:input$rows, input$columns], file, row.names = FALSE)
     }
   )
 }
