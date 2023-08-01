@@ -43,7 +43,7 @@ server <- function(input, output, session) {
     if (input$oneVarAnalysis) {
       if (input$oneVarHistogram) {
         # Create a histogram of the selected variable
-        ggplot(, aes_string(x = input$selectedOneVar)) + geom_histogram(binwidth = 1) + labs(title = "Histogram")
+        ggplot(WineQuality, aes_string(x = input$selectedOneVar)) + geom_histogram(binwidth = 1) + labs(title = "Histogram")
       } else {
         NULL
       }
@@ -142,10 +142,7 @@ server <- function(input, output, session) {
     summary(model_fits()$rf)
   })
   
-  # output$model_output <- renderPrint({
-  #   model_fits <- model_fits()
-  #   lapply(model_fits[1:3], summary)
-  # })
+
   test_stats <- reactive({
     model_fits <- model_fits()
     test_data <- model_fits$test_data
@@ -157,7 +154,6 @@ server <- function(input, output, session) {
         return(NULL)
       }
       preds <- predict(model, newdata = test_data)
-      # y_test <-test_data[input$dependent_var]
       sqrt(mean((test_data$dependent_var - preds)^2))
     })
     if(!is.null(rmse)) {
@@ -195,10 +191,22 @@ server <- function(input, output, session) {
   })
   
   output$column_checkboxes <- renderUI({
-    checkboxGroupInput("columns", "Columns to display:", choices = names(wine), selected = names(wine))
+    checkboxGroupInput("columns", "Columns to display:", choices = names(WineQuality), selected = names(WineQuality))
+  })
+  
+  output$data_table <- DT::renderDT({
+    DT::datatable(WineQuality, options = list(pageLength = 10))
   })
   
   
   
   #Data Page
+  output$download_data <- downloadHandler(
+    filename = function() {
+      "data.csv"
+    },
+    content = function(file) {
+      write.csv(wine[1:input$rows, input$columns], file, row.names = FALSE)
+    }
+  )
 }

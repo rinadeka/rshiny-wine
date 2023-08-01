@@ -241,20 +241,29 @@ ui <- dashboardPage(
               )
             )
           )
-        )
-      ),
-      # Data Page
-      tabItem(
-        tabName = "dataTab",
-        fluidRow(
-          #content here
-
-          )
+        ),
+    # Data Page
+    tabItem(
+      tabName = "dataTab",
+      fluidRow(
+        # Your Data page content goes here
+        column(width = 12,
+               h2("Data"),
+               # Allow the user to subset rows and columns
+               sidebarLayout(sidebarPanel(numericInput("rows", "Number of rows:", min = 1, max = nrow(WineQuality), value = nrow(WineQuality)),
+               uiOutput("column_checkboxes"),
+               # Download the whole or subsetted dataset as a CSV file
+               downloadButton("download_data", "Download the subsetted CSV")),
+               mainPanel(
+                 div(style = 'overflow-x: scroll', 
+                     DT::DTOutput("data_table")
+                 )
+               )
+               )
         )
       )
+    )
+    )
+    )
 )
-
-
-
-
 
