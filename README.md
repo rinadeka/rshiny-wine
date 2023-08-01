@@ -21,4 +21,5 @@ The following packages must be installed in order for this app to Run.
 The following line of code may be ran in your R Console or terminal; please run this in case you do not already have these packages. 
 `install.packages(c("shiny","shinydashboard","DT","caret","tidyverse","readr","ggplot2","rpart","randomForest","pROC","ggcorrplot","corrplot","e1071","Metrics"))`
 ## shiny::runGitHub()
-The following code can be pasted into RStudio in order to run this app.
+The following code can be pasted into RStudio console in order to run this app:
+`shiny::runGitHub("rinadeka/rshiny-wine")`
